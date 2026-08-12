@@ -1,0 +1,33 @@
+# /etc/systemd/system/battery-telemetry.service
+# Runs the C++ telemetry program on the Pi at boot.
+#
+# Install:
+#   sudo cp deploy/systemd/battery-telemetry.service /etc/systemd/system/
+#   sudo cp deploy/systemd/battery-telemetry.env /etc/default/battery-telemetry
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now battery-telemetry
+# Logs:
+#   journalctl -u battery-telemetry -f
+
+[Unit]
+Description=Battery telemetry (INA219 -> MQTT)
+# Start after the network is up; the broker may be local or on another machine.
+Wants=network-online.target
+After=network-online.target mosquitto.service
+
+[Service]
+Type=simple
+# Flags live in this file so you can change them without editing the unit.
+EnvironmentFile=/etc/default/battery-telemetry
+ExecStart=/usr/local/bin/battery_telemetry $TELEMETRY_ARGS
+# SIGTERM triggers a clean shutdown (threads joined, MQTT disconnected).
+KillSignal=SIGTERM
+Restart=on-failure
+RestartSec=5
+
+# Run as an unprivileged user that can open /dev/i2c-1 (the "i2c" group).
+User=pi
+Group=i2c
+
+[Install]
+WantedBy=multi-user.target

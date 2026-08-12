@@ -1,0 +1,4 @@
+# Test-only dependencies (CI and local). Install alongside the two runtime files:
+#   pip install -r backend/requirements.txt -r arbitrage/requirements.txt -r requirements-dev.txt
+pytest==8.3.4
+httpx==0.28.1

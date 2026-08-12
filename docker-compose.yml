@@ -1,0 +1,85 @@
+# Whole stack on a laptop, with the telemetry program in --mock mode:
+#   cp .env.example .env
+#   docker compose up --build
+#   open http://localhost:8080
+# Populate the arbitrage panel (uses the bundled sample unless PJM_API_KEY is set):
+#   docker compose run --rm arbitrage
+# With real hardware, leave out the mock:  docker compose up --build mosquitto db backend dashboard
+
+services:
+  mosquitto:
+    image: eclipse-mosquitto:2.0.20
+    ports:
+      - "1883:1883"
+    volumes:
+      - ./deploy/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+    restart: unless-stopped
+
+  db:
+    image: postgres:16.4
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-battery}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-battery}
+      POSTGRES_DB: ${POSTGRES_DB:-battery}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-battery}"]
+      interval: 5s
+      retries: 10
+    restart: unless-stopped
+
+  backend:
+    build: ./backend
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-battery}:${POSTGRES_PASSWORD:-battery}@db:5432/${POSTGRES_DB:-battery}
+      MQTT_HOST: mosquitto
+      MQTT_PORT: 1883
+      MQTT_TOPIC: battery/telemetry
+      CORS_ORIGINS: ${CORS_ORIGINS:-*}
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      mosquitto:
+        condition: service_started
+    restart: unless-stopped
+
+  dashboard:
+    build: ./dashboard
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  telemetry:
+    build:
+      context: .
+      dockerfile: telemetry/Dockerfile
+    command: ["--mock", "--host", "mosquitto"]
+    depends_on:
+      - mosquitto
+    restart: unless-stopped
+
+  arbitrage:
+    build:
+      context: .
+      dockerfile: arbitrage/Dockerfile
+    profiles: ["tools"]   # not started by `up`; run with `docker compose run --rm arbitrage`
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-battery}:${POSTGRES_PASSWORD:-battery}@db:5432/${POSTGRES_DB:-battery}
+      PJM_API_KEY: ${PJM_API_KEY:-}
+    volumes:
+      - ./arbitrage/output:/app/arbitrage/output
+      - ./arbitrage/data/cache:/app/arbitrage/data/cache
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pgdata:

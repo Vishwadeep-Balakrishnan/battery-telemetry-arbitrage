@@ -1,0 +1,21 @@
+# /etc/systemd/system/battery-backend.service
+# Optional: run the FastAPI backend natively on the Pi (instead of Docker).
+# Assumes the repo is at /home/pi/battery-telemetry with a venv in .venv
+# (see README, "Option B: everything natively on the Pi").
+
+[Unit]
+Description=Battery telemetry backend (FastAPI)
+Wants=network-online.target
+After=network-online.target postgresql.service mosquitto.service
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/battery-telemetry/backend
+EnvironmentFile=/home/pi/battery-telemetry/.env
+ExecStart=/home/pi/battery-telemetry/.venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
