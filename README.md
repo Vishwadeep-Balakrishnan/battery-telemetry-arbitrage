@@ -1,6 +1,5 @@
 # Battery Telemetry & Power Market Arbitrage Simulator
 
-![CI](https://github.com/Vishwadeep-Balakrishnan/battery-telemetry/actions/workflows/ci.yml/badge.svg)
 
 A Raspberry Pi measures a real lithium-ion cell, and a simulator asks what a
 battery like it could earn trading on the PJM electricity market.
@@ -105,37 +104,7 @@ The INA219 sits on the **high side**: in series between the battery's positive
 terminal (via the TP4056's protected output) and the load. Every milliamp the
 load draws flows through the 0.1 Ω shunt from VIN+ to VIN−.
 
-```
-                     USB-C 5V in
-                         │
-                 ┌───────┴────────┐
-   ┌──────────┐  │     TP4056     │             ┌─────────────────┐
-   │  18650   │  │ (charger +     │             │     INA219      │
-   │  cell    │  │  protection)   │             │   0.1 Ω shunt   │
-   │        + ├──┤ B+        OUT+ ├─────────────┤ VIN+       VIN− ├──┐
-   │        − ├──┤ B−        OUT− ├──┐          │                 │  │
-   └──────────┘  └────────────────┘  │          │ GND VCC SDA SCL │  │
-                                     │          └──┬───┬───┬───┬──┘  │
-                                     │             │   │   │   │     │   SW1 toggle
-                                     │             │   │   │   │     └────o/ o────┐
-                                     │             │   │   │   │                  │
-                                     │             │   │   │   │             ┌────┴────┐
-                                     │             │   │   │   │             │  LOAD   │
-                                     │             │   │   │   │             │ 10 Ω 5W │
-                                     │             │   │   │   │             └────┬────┘
-                 ╔═══════════════════╧═════════════╧═══╪═══╪═══╪══════════════════┘
-                 ║  COMMON GROUND (OUT−)               │   │   │
-                 ║          Raspberry Pi GPIO header   │   │   │
-                 ║          ┌───────────────────────┐  │   │   │
-                 ║          │ pin 1  3.3V    ───────┼──┘   │   │
-                 ║          │ pin 3  GPIO2 / SDA ───┼──────┘   │
-                 ║          │ pin 5  GPIO3 / SCL ───┼──────────┘
-                 ╚══════════╡ pin 6  GND            │
-                            └───────────────────────┘
-                            (Pi powered by its own USB supply)
-```
-
-A cleaner drawing is in [`docs/wiring.svg`](docs/wiring.svg):
+[`docs/wiring.svg`](docs/wiring.svg):
 
 ![Wiring diagram](docs/wiring.svg)
 
